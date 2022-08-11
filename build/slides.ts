@@ -1,10 +1,9 @@
-import fs from 'fs-extra'
 import { dirname, join } from 'path'
 import { Plugin, ResolvedConfig } from 'vite'
 import { Octokit } from '@octokit/rest'
 import { fileURLToPath } from 'url'
-import 'zx/globals'
 import { spawnSync } from 'child_process'
+import 'zx/globals'
 
 export interface ISlidesPluginOptions {
   owner: string
@@ -52,80 +51,82 @@ export async function prepare(
   options: ResolvedPluginOptions,
   viteConfig: ResolvedConfig
 ) {
-  const IS_DEV = viteConfig.mode === 'development'
-  const cache = join(__dirname, 'cache')
-  await fs.ensureDir(cache)
-  cd(cache)
+  return await within(async () => {
+    const IS_DEV = viteConfig.mode === 'development'
+    const cache = join(__dirname, 'cache')
+    await fs.ensureDir(cache)
+    cd(cache)
 
-  const kit = new Octokit()
-  const resp = options.isOrg
-    ? kit.repos.listForOrg({ org: options.owner })
-    : kit.repos.listForUser({ username: options.owner })
+    const kit = new Octokit()
+    const resp = options.isOrg
+      ? kit.repos.listForOrg({ org: options.owner })
+      : kit.repos.listForUser({ username: options.owner })
 
-  const repos = await resp.then(({ data }) =>
-    data.filter(
-      (repo) => !options.ignore.some((item) => isMatched(repo.name, item))
+    const repos = await resp.then(({ data }) =>
+      data.filter(
+        (repo) => !options.ignore.some((item) => isMatched(repo.name, item))
+      )
     )
-  )
 
-  /** @type {import('./slides').ISlidesInfo} */
-  const info = {
-    owner: options.owner,
-    generated: Date.now(),
-    /** @type {any[]} */
-    slides: []
-  }
-
-  for (const repo of repos) {
-    console.log(chalk.blueBright(`Preparing ${repo.name}`))
-    const loc = repo.name.toLowerCase()
-
-    console.log(chalk.blueBright(`=> [${repo.name}] Fetch code`))
-    if (await fs.pathExists(loc)) {
-      cd(loc)
-      await $`git fetch --all`
-      await $`git reset --hard origin/HEAD`
-    } else {
-      await $`git clone ${repo.clone_url} ${loc}`
-      cd(loc)
+    /** @type {import('./slides').ISlidesInfo} */
+    const info = {
+      owner: options.owner,
+      generated: Date.now(),
+      /** @type {any[]} */
+      slides: []
     }
 
-    let slideInfo: ISlideConfig = {}
-    if (await fs.pathExists(join(cache, loc, 'slide.json'))) {
-      slideInfo = await fs.readJSON(join(cache, loc, 'slide.json'))
-    }
+    for (const repo of repos) {
+      console.log(chalk.blueBright(`Preparing ${repo.name}`))
+      const loc = repo.name.toLowerCase()
 
-    const slug = slideInfo.slug ?? loc
-
-    if (IS_DEV) {
-      console.log(chalk.blueBright(`=> [${repo.name}] Build is skipped`))
-    } else {
-      console.log(chalk.blueBright(`=> [${repo.name}] Install dependencies`))
-      spawnSync('yarn', ['install'], {
-        stdio: 'inherit',
-        env: { PATH: process.env.PATH },
-        shell: true
-      })
-
-      console.log(chalk.blueBright(`=> [${repo.name}] Build`))
-      $.env.SLIDE_BASE = `/${slug}/`
-      await $`yarn build`
-    }
-
-    cd('..')
-    info.slides.push({
-      slug,
-      name: slideInfo.name ?? repo.name,
-      description: slideInfo.description ?? repo.description ?? '',
-      repo: {
-        name: repo.name,
-        url: repo.html_url
+      console.log(chalk.blueBright(`=> [${repo.name}] Fetch code`))
+      if (await fs.pathExists(loc)) {
+        cd(loc)
+        await $`git fetch --all`
+        await $`git reset --hard origin/HEAD`
+      } else {
+        await $`git clone ${repo.clone_url} ${loc}`
+        cd(loc)
       }
-    })
-  }
 
-  await fs.writeJSON(join(cache, 'info.json'), info, { spaces: 2 })
-  return info
+      let slideInfo: ISlideConfig = {}
+      if (await fs.pathExists(join(cache, loc, 'slide.json'))) {
+        slideInfo = await fs.readJSON(join(cache, loc, 'slide.json'))
+      }
+
+      const slug = slideInfo.slug ?? loc
+
+      if (IS_DEV) {
+        console.log(chalk.blueBright(`=> [${repo.name}] Build is skipped`))
+      } else {
+        console.log(chalk.blueBright(`=> [${repo.name}] Install dependencies`))
+        spawnSync('yarn', ['install'], {
+          stdio: 'inherit',
+          env: { PATH: process.env.PATH },
+          shell: true
+        })
+
+        console.log(chalk.blueBright(`=> [${repo.name}] Build`))
+        $.env.SLIDE_BASE = `/${slug}/`
+        await $`yarn build`
+      }
+
+      cd('..')
+      info.slides.push({
+        slug,
+        name: slideInfo.name ?? repo.name,
+        description: slideInfo.description ?? repo.description ?? '',
+        repo: {
+          name: repo.name,
+          url: repo.html_url
+        }
+      })
+    }
+
+    await fs.writeJSON(join(cache, 'info.json'), info, { spaces: 2 })
+    return info
+  })
 }
 
 function resolvePluginOptions(
