@@ -150,7 +150,7 @@ function resolvePluginOptions(
   return {
     owner: options.owner,
     isOrg: options.isOrg ?? true,
-    ignore: options.ignore ?? ['index', /template/]
+    ignore: options.ignore ?? ['index']
   }
 }
 
