@@ -28,6 +28,9 @@ export interface ISlideInfo {
   repo: {
     name: string
     url: string
+    createdAt: number
+    updatedAt: number
+    pushedAt: number
   }
   build: {
     status: 'success' | 'failure'
@@ -61,8 +64,8 @@ export async function prepare(
 
     const kit = new Octokit()
     const resp = options.isOrg
-      ? kit.repos.listForOrg({ org: options.owner })
-      : kit.repos.listForUser({ username: options.owner })
+      ? kit.repos.listForOrg({ org: options.owner, sort: 'updated' })
+      : kit.repos.listForUser({ username: options.owner, sort: 'updated' })
 
     const repos = await resp.then(({ data }) =>
       data.filter(
@@ -130,7 +133,10 @@ export async function prepare(
         description: slideInfo.description ?? repo.description ?? '',
         repo: {
           name: repo.name,
-          url: repo.html_url
+          url: repo.html_url,
+          createdAt: +new Date(repo.created_at),
+          updatedAt: +new Date(repo.updated_at),
+          pushedAt: +new Date(repo.pushed_at)
         },
         build: {
           status
