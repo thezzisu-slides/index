@@ -43,6 +43,14 @@
           </q-img>
           <q-card-section>
             {{ slide.description }}
+            <br />
+            <q-badge
+              :color="
+                slide.build.status === 'success' ? 'positive' : 'negative'
+              "
+            >
+              Build: {{ slide.build.status }}
+            </q-badge>
           </q-card-section>
           <q-separator />
           <q-card-actions align="right">

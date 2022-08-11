@@ -29,6 +29,9 @@ export interface ISlideInfo {
     name: string
     url: string
   }
+  build: {
+    status: 'success' | 'failure'
+  }
 }
 
 export interface ISlidesInfo {
@@ -55,7 +58,6 @@ export async function prepare(
     const IS_DEV = viteConfig.mode === 'development'
     const cache = join(__dirname, 'cache')
     await fs.ensureDir(cache)
-    cd(cache)
 
     const kit = new Octokit()
     const resp = options.isOrg
@@ -68,51 +70,60 @@ export async function prepare(
       )
     )
 
-    /** @type {import('./slides').ISlidesInfo} */
-    const info = {
+    const info: ISlidesInfo = {
       owner: options.owner,
       generated: Date.now(),
-      /** @type {any[]} */
       slides: []
     }
 
     for (const repo of repos) {
       console.log(chalk.blueBright(`Preparing ${repo.name}`))
       const loc = repo.name.toLowerCase()
-
-      console.log(chalk.blueBright(`=> [${repo.name}] Fetch code`))
-      if (await fs.pathExists(loc)) {
-        cd(loc)
-        await $`git fetch --all`
-        await $`git reset --hard origin/HEAD`
-      } else {
-        await $`git clone ${repo.clone_url} ${loc}`
-        cd(loc)
-      }
-
       let slideInfo: ISlideConfig = {}
-      if (await fs.pathExists(join(cache, loc, 'slide.json'))) {
-        slideInfo = await fs.readJSON(join(cache, loc, 'slide.json'))
+      let status: 'failure' | 'success' = 'failure'
+      let slug = loc
+
+      try {
+        cd(cache)
+
+        console.log(chalk.blueBright(`=> [${repo.name}] Fetch code`))
+        if (await fs.pathExists(loc)) {
+          cd(loc)
+          await $`git fetch --all`
+          await $`git reset --hard origin/HEAD`
+        } else {
+          await $`git clone ${repo.clone_url} ${loc}`
+          cd(loc)
+        }
+
+        if (await fs.pathExists(join(cache, loc, 'slide.json'))) {
+          slideInfo = await fs.readJSON(join(cache, loc, 'slide.json'))
+        }
+
+        slug = slideInfo.slug ?? slug
+
+        if (IS_DEV) {
+          console.log(chalk.blueBright(`=> [${repo.name}] Build is skipped`))
+        } else {
+          console.log(
+            chalk.blueBright(`=> [${repo.name}] Install dependencies`)
+          )
+          spawnSync('yarn', ['install'], {
+            stdio: 'inherit',
+            env: { PATH: process.env.PATH },
+            shell: true
+          })
+
+          console.log(chalk.blueBright(`=> [${repo.name}] Build`))
+          $.env.SLIDE_BASE = `/${slug}/`
+          await $`yarn build`
+        }
+
+        status = 'success'
+      } catch (err) {
+        console.error(err)
       }
 
-      const slug = slideInfo.slug ?? loc
-
-      if (IS_DEV) {
-        console.log(chalk.blueBright(`=> [${repo.name}] Build is skipped`))
-      } else {
-        console.log(chalk.blueBright(`=> [${repo.name}] Install dependencies`))
-        spawnSync('yarn', ['install'], {
-          stdio: 'inherit',
-          env: { PATH: process.env.PATH },
-          shell: true
-        })
-
-        console.log(chalk.blueBright(`=> [${repo.name}] Build`))
-        $.env.SLIDE_BASE = `/${slug}/`
-        await $`yarn build`
-      }
-
-      cd('..')
       info.slides.push({
         slug,
         name: slideInfo.name ?? repo.name,
@@ -120,10 +131,14 @@ export async function prepare(
         repo: {
           name: repo.name,
           url: repo.html_url
+        },
+        build: {
+          status
         }
       })
     }
 
+    cd(cache)
     await fs.writeJSON(join(cache, 'info.json'), info, { spaces: 2 })
     return info
   })
