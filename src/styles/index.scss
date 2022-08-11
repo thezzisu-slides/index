@@ -1,0 +1,10 @@
+@import url(src/styles/background.scss);
+@import url(src/styles/fonts.scss);
+
+.font-mono,
+code,
+kbd,
+pre,
+samp {
+  font-family: 'Cascadia Code', 'Consolas', Courier, monospace;
+}
