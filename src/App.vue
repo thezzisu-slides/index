@@ -22,8 +22,11 @@
     <q-page-container>
       <q-page padding class="row q-gutter-sm items-start content-start">
         <q-card flat class="col-12 text-center">
-          <q-card-section class="text-h5">
-            Choose a slide to continue
+          <q-card-section>
+            <div class="text-h5">Choose a slide to continue</div>
+            <div class="text-overline">
+              Generated on {{ new Date(info.generated).toLocaleString() }}
+            </div>
           </q-card-section>
         </q-card>
         <q-card
