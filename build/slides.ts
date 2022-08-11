@@ -4,6 +4,7 @@ import { Plugin, ResolvedConfig } from 'vite'
 import { Octokit } from '@octokit/rest'
 import { fileURLToPath } from 'url'
 import 'zx/globals'
+import { spawnSync } from 'child_process'
 
 export interface ISlidesPluginOptions {
   owner: string
@@ -100,7 +101,11 @@ export async function prepare(
       console.log(chalk.blueBright(`=> [${repo.name}] Build is skipped`))
     } else {
       console.log(chalk.blueBright(`=> [${repo.name}] Install dependencies`))
-      await $`yarn`
+      spawnSync('yarn', ['install'], {
+        stdio: 'inherit',
+        env: { PATH: process.env.PATH },
+        shell: true
+      })
 
       console.log(chalk.blueBright(`=> [${repo.name}] Build`))
       $.env.SLIDE_BASE = `/${slug}/`
