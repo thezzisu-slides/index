@@ -120,6 +120,7 @@ export async function prepare(
   }
 
   await fs.writeJSON(join(cache, 'info.json'), info, { spaces: 2 })
+  return info
 }
 
 function resolvePluginOptions(
@@ -134,11 +135,9 @@ function resolvePluginOptions(
 
 export default function slides(_options: ISlidesPluginOptions): Plugin {
   const options = resolvePluginOptions(_options)
-  const info: ISlidesInfo = JSON.parse(
-    fs.readFileSync(join(__dirname, 'cache', 'info.json'), 'utf8')
-  )
   const prefix = 'virtual:slides'
   let viteConfig: ResolvedConfig
+  let info: ISlidesInfo
 
   return {
     name: 'content',
@@ -146,7 +145,7 @@ export default function slides(_options: ISlidesPluginOptions): Plugin {
       viteConfig = config
     },
     async buildStart() {
-      await prepare(options, viteConfig)
+      info = await prepare(options, viteConfig)
     },
     resolveId(id) {
       if (id.startsWith(prefix)) {
