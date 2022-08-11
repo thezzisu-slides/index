@@ -20,7 +20,7 @@
     </q-header>
 
     <q-page-container>
-      <q-page padding class="row q-gutter-sm items-start content-start">
+      <q-page padding class="row items-start content-start q-mr-md">
         <q-card flat class="col-12 text-center">
           <q-card-section>
             <div class="text-h5">Choose a slide to continue</div>
@@ -29,39 +29,41 @@
             </div>
           </q-card-section>
         </q-card>
-        <q-card
+        <div
           v-for="(slide, i) of info.slides"
           :key="i"
-          class="col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2"
+          class="col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2 q-pl-md q-pt-md"
         >
-          <q-img
-            :src="`https://opengraph.githubassets.com/${hashstr}/${info.owner}/${slide.repo.name}`"
-          >
-            <div class="absolute-bottom text-subtitle2 text-left">
-              {{ slide.name }}
-            </div>
-          </q-img>
-          <q-card-section>
-            {{ slide.description }}
-            <br />
-            <q-badge
-              :color="
-                slide.build.status === 'success' ? 'positive' : 'negative'
-              "
+          <q-card>
+            <q-img
+              :src="`https://opengraph.githubassets.com/${hashstr}/${info.owner}/${slide.repo.name}`"
             >
-              Build: {{ slide.build.status }}
-            </q-badge>
-          </q-card-section>
-          <q-separator />
-          <q-card-actions align="right">
-            <q-btn flat icon="mdi-open-in-new" :href="`/${slide.slug}/`" />
-            <q-btn
-              flat
-              icon="mdi-github"
-              :href="`https://www.github.com/${info.owner}/${slide.repo.name}`"
-            />
-          </q-card-actions>
-        </q-card>
+              <div class="absolute-bottom text-subtitle2 text-left">
+                {{ slide.name }}
+              </div>
+            </q-img>
+            <q-card-section>
+              {{ slide.description }}
+              <br />
+              <q-badge
+                :color="
+                  slide.build.status === 'success' ? 'positive' : 'negative'
+                "
+              >
+                Build: {{ slide.build.status }}
+              </q-badge>
+            </q-card-section>
+            <q-separator />
+            <q-card-actions align="right">
+              <q-btn flat icon="mdi-open-in-new" :href="`/${slide.slug}/`" />
+              <q-btn
+                flat
+                icon="mdi-github"
+                :href="`https://www.github.com/${info.owner}/${slide.repo.name}`"
+              />
+            </q-card-actions>
+          </q-card>
+        </div>
       </q-page>
     </q-page-container>
 
